@@ -1795,6 +1795,13 @@ export default function VibesScreen() {
 
     const handleUpdateEvent = () => {
       loadIndexedDBVibes();
+      try {
+        const deletedVibeIds = JSON.parse(localStorage.getItem('skrimchat_deleted_vibe_ids') || '[]');
+        setSessionUserVibes(prev => prev.filter(v => v && v.id && !deletedVibeIds.includes(v.id)));
+        setVibes(prev => prev.filter(v => v && v.id && !deletedVibeIds.includes(v.id)));
+      } catch (e) {
+        console.error("Failed to sync deleted vibes:", e);
+      }
     };
     window.addEventListener('skrimchat_user_vibes_updated', handleUpdateEvent);
     return () => {
