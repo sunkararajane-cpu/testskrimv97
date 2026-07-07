@@ -1272,117 +1272,54 @@ export default function IdentityScreen() {
 
         {activeTab === 'saved' && (
           <div className="flex flex-col">
-          <div className="flex px-4 py-0 gap-6 border-b border-white/5">
-            <button 
-              className={`text-sm font-semibold py-3 px-1 relative ${activeSavedTab === 'bookmarks' ? 'text-white' : 'text-gray-500 hover:text-gray-400'}`}
-              onClick={() => setActiveSavedTab('bookmarks')}
-            >
-              Bookmarks
-              {activeSavedTab === 'bookmarks' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white" />}
-            </button>
-            <button 
-              className={`text-sm font-semibold py-3 px-1 relative flex items-center gap-1.5 ${activeSavedTab === 'offline' ? 'text-white' : 'text-gray-500 hover:text-gray-400'}`}
-              onClick={() => setActiveSavedTab('offline')}
-            >
-              <Download className="w-4 h-4" /> Offline
-              {activeSavedTab === 'offline' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white" />}
-            </button>
-          </div>
+            <div className="flex px-4 py-0 gap-6 border-b border-white/5">
+              <span className="text-sm font-semibold py-3 px-1 text-white border-b-2 border-white">
+                Bookmarks
+              </span>
+            </div>
 
-          {activeSavedTab === 'bookmarks' && (
-           <div className="grid grid-cols-3 gap-0.5 pt-0.5">
-             {savedItems.length === 0 ? (
-                <div className="col-span-3 text-center py-20 text-gray-500 text-sm">No saved posts yet.</div>
-             ) : savedItems.map((item, i) => {
-               const isVideo = !!(item.videoSrc || item.type === 'video' || (item.id?.startsWith('reel') || (item.id?.startsWith('vibe') && item.type !== 'image' && item.type !== 'text' && !item.bgColor)));
-               const url = item.image || item.videoImageHover || item.videoImage || item.thumbnail;
-               return (
-               <motion.div 
-                 initial={{ opacity: 0 }}
-                 animate={{ opacity: 1 }}
-                 transition={{ delay: (i % 6) * 0.05 }}
-                 key={`saved-${item.id || ""}_${i}`} className="aspect-square bg-white/5 relative group cursor-pointer overflow-hidden"
-                 onClick={() => setSelectedMedia({ 
-                   index: i, 
-                   type: (item.id?.startsWith('vibe') || item.id?.startsWith('reel') || isVideo) ? 'vibe' : 'saved', 
-                   isSavedTab: true,
-                   urls: savedItems.map(it => it.videoSrc || it.image || it.videoImageHover || it.videoImage || it.thumbnail || ''),
-                   users: savedItems.map((it: any) => ({ ...it, username: it.handle || it.userName || it.user?.username || '@someone', avatar: it.avatar || it.userAvatar || it.user?.avatar || 'https://i.pravatar.cc/150' }))
-                 })}
-               >
-                 {url ? (
-                   <img src={url} alt="saved" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                 ) : item.videoSrc ? (
-                   <video 
-                     src={item.videoSrc} 
-                     muted 
-                     playsInline 
-                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                   />
-                 ) : (
-                   <div 
-                     className="w-full h-full flex flex-col items-center justify-center p-3 text-center text-[10px] font-bold overflow-hidden select-none"
-                     style={{ backgroundColor: item.bgColor || item.colorTag || '#3B0066' }}
-                   >
-                     <span className="text-white/80 line-clamp-4 leading-normal">{item.caption || item.text}</span>
-                   </div>
-                 )}
-                 {isVideo && <div className="absolute top-2 left-2"><PlaySquare className="w-4 h-4 text-white drop-shadow-md" /></div>}
-                 <div className="absolute top-2 right-2"><Bookmark className="w-4 h-4 fill-[#00F0FF] text-[#00F0FF] drop-shadow-md" /></div>
-               </motion.div>
-             )})}
-           </div>
-          )}
-
-          {activeSavedTab === 'offline' && (
-           <div className="grid grid-cols-3 gap-0.5 pt-0.5">
-             {offlineVibes.length === 0 ? (
-                <div className="col-span-3 text-center py-24 text-gray-500 text-sm flex flex-col items-center justify-center gap-3">
-                   <Download className="w-10 h-10 text-gray-600 mb-2 opacity-50" />
-                   <p className="font-medium text-white/50 text-base flex flex-col">No offline vibes downlaoded. <span className="text-xs mt-1">Save vibes to watch without internet.</span></p>
-                </div>
-             ) : offlineVibes.map((item, i) => {
-               return (
-               <motion.div 
-                 initial={{ opacity: 0 }}
-                 animate={{ opacity: 1 }}
-                 transition={{ delay: (i % 6) * 0.05 }}
-                 key={`offline-${item.id || ""}_${i}`} className="aspect-[3/4] bg-white/5 relative group cursor-pointer overflow-hidden"
-                 onClick={() => setSelectedMedia({ 
-                   index: i, 
-                   type: 'vibe', 
-                   urls: offlineVibes.map(v => v.videoUrl),
-                   users: offlineVibes.map(v => {
-                     const c = v.creator;
-                     if (!c || Object.keys(c).length === 0) return { username: '@someone', avatar: 'https://i.pravatar.cc/150' };
-                     return {
-                       username: c.username || c.handle || c.user || c.displayName || '@someone',
-                       avatar: c.avatar || 'https://i.pravatar.cc/150'
-                     };
-                   })
-                 })}
-                 onContextMenu={(e) => {
-                   e.preventDefault();
-                   if (window.confirm(`Delete offline vibe: ${item.caption}?`)) {
-                     deleteVibe(item.id);
-                   }
-                 }}
-               >
-                 <img src={item.thumbnail || null} alt="thumbnail" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                 <div className="absolute top-2 left-2"><PlaySquare className="w-4 h-4 text-white drop-shadow-md" /></div>
-                 
-                 <div className="absolute top-2 right-2 flex items-center justify-center bg-black/60 backdrop-blur text-white text-[10px] w-6 h-6 rounded-full shadow">
-                    <Download className="w-3.5 h-3.5 text-[#00F0FF]" />
-                 </div>
-
-                 <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/90 to-transparent">
-                   {(item.creator?.username || item.creator?.handle) && <p className="text-white text-xs font-semibold truncate drop-shadow">{item.creator.username || item.creator.handle}</p>}
-                   {item.caption && <p className="text-white/80 text-[10px] truncate mt-0.5 drop-shadow">{item.caption}</p>}
-                 </div>
-               </motion.div>
-             )})}
-           </div>
-          )}
+            <div className="grid grid-cols-3 gap-0.5 pt-0.5">
+              {savedItems.length === 0 ? (
+                 <div className="col-span-3 text-center py-20 text-gray-500 text-sm">No saved posts yet.</div>
+              ) : savedItems.map((item, i) => {
+                const isVideo = !!(item.videoSrc || item.type === 'video' || (item.id?.startsWith('reel') || (item.id?.startsWith('vibe') && item.type !== 'image' && item.type !== 'text' && !item.bgColor)));
+                const url = item.image || item.videoImageHover || item.videoImage || item.thumbnail;
+                return (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: (i % 6) * 0.05 }}
+                  key={`saved-${item.id || ""}_${i}`} className="aspect-square bg-white/5 relative group cursor-pointer overflow-hidden"
+                  onClick={() => setSelectedMedia({ 
+                    index: i, 
+                    type: (item.id?.startsWith('vibe') || item.id?.startsWith('reel') || isVideo) ? 'vibe' : 'saved', 
+                    isSavedTab: true,
+                    urls: savedItems.map(it => it.videoSrc || it.image || it.videoImageHover || it.videoImage || it.thumbnail || ''),
+                    users: savedItems.map((it: any) => ({ ...it, username: it.handle || it.userName || it.user?.username || '@someone', avatar: it.avatar || it.userAvatar || it.user?.avatar || 'https://i.pravatar.cc/150' }))
+                  })}
+                >
+                  {url ? (
+                    <img src={url} alt="saved" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  ) : item.videoSrc ? (
+                    <video 
+                      src={item.videoSrc} 
+                      muted 
+                      playsInline 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                    />
+                  ) : (
+                    <div 
+                      className="w-full h-full flex flex-col items-center justify-center p-3 text-center text-[10px] font-bold overflow-hidden select-none"
+                      style={{ backgroundColor: item.bgColor || item.colorTag || '#3B0066' }}
+                    >
+                      <span className="text-white/80 line-clamp-4 leading-normal">{item.caption || item.text}</span>
+                    </div>
+                  )}
+                  {isVideo && <div className="absolute top-2 left-2"><PlaySquare className="w-4 h-4 text-white drop-shadow-md" /></div>}
+                  <div className="absolute top-2 right-2"><Bookmark className="w-4 h-4 fill-[#00F0FF] text-[#00F0FF] drop-shadow-md" /></div>
+                </motion.div>
+              )})}
+            </div>
           </div>
         )}
 
