@@ -96,7 +96,7 @@ export function SparkCreator({ isOpen, onClose, onPost, respondingToChallenge, r
   const [isVideoMuted, setIsVideoMuted] = useState(false);
   const [showTrimSlider, setShowTrimSlider] = useState(false);
   const [showMusicPicker, setShowMusicPicker] = useState(false);
-  const [selectedMusic, setSelectedMusic] = useState<{ url: string; title: string; start_ms: number } | null>(null);
+  const [selectedMusic, setSelectedMusic] = useState<{ url: string; title: string; start_ms: number; duration_s?: number } | null>(null);
   const [trimStart, setTrimStart] = useState(0);
   const [trimEnd, setTrimEnd] = useState(0);
   const [videoDuration, setVideoDuration] = useState(0);
@@ -253,6 +253,7 @@ export function SparkCreator({ isOpen, onClose, onPost, respondingToChallenge, r
       music_url: selectedMusic?.url || undefined,
       music_start_ms: selectedMusic?.start_ms ?? undefined,
       music_title: selectedMusic?.title || undefined,
+      music_duration_s: selectedMusic?.duration_s ?? undefined,
       audioUrl: selectedMusic?.url || undefined,
       // New interactive stickers
       qnaSticker: qnaEnabled ? { prompt: qnaPrompt.trim() || 'Ask me anything!' } : undefined,

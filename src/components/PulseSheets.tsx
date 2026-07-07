@@ -275,6 +275,8 @@ export function PulseReshareSheet({
           backgroundTheme: post.backgroundTheme || post.bgColor || undefined,
           music_title: post.audio || post.music_title || post.music?.title || null,
           audioUrl: post.audioUrl || post.music?.url || undefined,
+          music_start_ms: post.music_start_ms ?? post.start_ms ?? post.music?.start_ms ?? undefined,
+          music_duration_s: post.music_duration_s ?? post.duration ?? post.duration_s ?? post.music?.duration_s ?? undefined,
         };
         await saveRecord('sparks', newSpark);
         window.dispatchEvent(new CustomEvent('skrimchat_spark_reposted', { detail: newSpark }));
@@ -566,6 +568,8 @@ export function PulseSendSheet({
           views: 0,
           reactions: { pulse: 0, blaze: 0, vibe: 0 },
           type: (post.images && post.images.length > 1) ? 'multi_image' : (post.type || sparkType),
+          music_start_ms: post.music_start_ms ?? post.start_ms ?? post.music?.start_ms ?? undefined,
+          music_duration_s: post.music_duration_s ?? post.duration ?? post.duration_s ?? post.music?.duration_s ?? undefined,
         } : {
           id: sparkId, user: activeUser, isOwn: true, isRepost: true,
           repostedFrom: post.handle || post.user?.username || 'user', createdAt: Date.now(),
@@ -582,6 +586,8 @@ export function PulseSendSheet({
           backgroundTheme: post.backgroundTheme || post.bgColor || undefined,
           music_title: post.audio || post.music_title || post.music?.title || null,
           audioUrl: post.audioUrl || post.music?.url || undefined,
+          music_start_ms: post.music_start_ms ?? post.start_ms ?? post.music?.start_ms ?? undefined,
+          music_duration_s: post.music_duration_s ?? post.duration ?? post.duration_s ?? post.music?.duration_s ?? undefined,
         };
         await saveRecord('sparks', newSpark);
         window.dispatchEvent(new CustomEvent('skrimchat_spark_reposted', { detail: newSpark }));

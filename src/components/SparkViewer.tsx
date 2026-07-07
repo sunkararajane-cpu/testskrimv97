@@ -477,6 +477,42 @@ export function SparkViewer({
     }
   }, [isActive, sparkIndex, userIndex, isMuted, spark?.audioUrl, spark?.music_url, spark?.id]);
 
+  // Track the last loaded spark ID to detect if the spark actually changed and reset position
+  const lastSparkIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !(spark?.audioUrl || spark?.music_url)) return;
+
+    const startSecs = (spark.music_start_ms ?? spark.start_ms ?? spark.music?.start_ms ?? 0) / 1000;
+
+    if (lastSparkIdRef.current !== spark.id) {
+      audio.currentTime = startSecs;
+      lastSparkIdRef.current = spark.id;
+    }
+  }, [sparkIndex, userIndex, spark?.id, spark?.audioUrl, spark?.music_url]);
+
+  // Handle precise timeupdate boundary looping for spark audio
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !(spark?.audioUrl || spark?.music_url)) return;
+
+    const startSecs = (spark.music_start_ms ?? spark.start_ms ?? spark.music?.start_ms ?? 0) / 1000;
+    const duration = spark.music_duration_s ?? spark.duration ?? spark.duration_s ?? spark.music?.duration_s ?? 15;
+    const endSecs = startSecs + duration;
+
+    const handleTimeUpdate = () => {
+      if (audio.currentTime >= endSecs || audio.currentTime < startSecs) {
+        audio.currentTime = startSecs;
+      }
+    };
+
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    return () => {
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+    };
+  }, [sparkIndex, userIndex, spark?.id, spark?.audioUrl, spark?.music_url, spark?.music_start_ms, spark?.start_ms, spark?.music?.start_ms, spark?.music_duration_s, spark?.duration, spark?.duration_s, spark?.music?.duration_s]);
+
   useEffect(() => {
     if (activeSheet === "highlight" || activeSheet === "create-highlight" || activeSheet === "highlight-options") {
       try {
@@ -1560,7 +1596,7 @@ export function SparkViewer({
                         <audio
                           ref={audioRef}
                           src={spark.audioUrl || spark.music_url}
-                          loop={isActive}
+                          loop={false}
                           preload="auto"
                           muted={isMuted}
                           autoPlay={isActive}
