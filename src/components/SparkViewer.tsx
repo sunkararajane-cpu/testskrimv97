@@ -2621,7 +2621,7 @@ export function SparkViewer({
                         <div className="flex flex-col gap-2.5 max-h-[180px] overflow-y-auto no-scrollbar pr-1">
                           {sparkReplies.map((reply: any, index: number) => (
                             <div
-                              key={reply.id || index}
+                              key={`${reply.id || 'reply'}_${index}`}
                               className="flex items-start gap-2.5 bg-white/5 border border-white/5 rounded-xl p-2.5"
                             >
                               <img
@@ -3299,7 +3299,7 @@ export function SparkViewer({
                         <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto no-scrollbar pr-1">
                           {sparkReplies.map((reply: any, index: number) => (
                             <div
-                              key={reply.id || index}
+                              key={`${reply.id || 'reply'}_${index}`}
                               className="flex items-start gap-2.5 bg-white/5 border border-white/5 rounded-xl p-2.5"
                             >
                               <img
