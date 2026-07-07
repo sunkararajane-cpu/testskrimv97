@@ -272,7 +272,7 @@ export function PulseReshareSheet({
           text: post.caption || post.text || '',
           caption: post.caption || post.text || '', sourcePostId: post.id,
           background: 'purple',
-          backgroundTheme: post.backgroundTheme || undefined,
+          backgroundTheme: post.backgroundTheme || post.bgColor || undefined,
           music_title: post.audio || post.music_title || post.music?.title || null,
           audioUrl: post.audioUrl || post.music?.url || undefined,
         };
@@ -579,7 +579,7 @@ export function PulseSendSheet({
           text: post.caption || post.text || '',
           caption: post.caption || post.text || '', sourcePostId: post.id,
           background: 'purple',
-          backgroundTheme: post.backgroundTheme || undefined,
+          backgroundTheme: post.backgroundTheme || post.bgColor || undefined,
           music_title: post.audio || post.music_title || post.music?.title || null,
           audioUrl: post.audioUrl || post.music?.url || undefined,
         };

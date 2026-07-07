@@ -1195,7 +1195,7 @@ export function SparkViewer({
         <div
           className="hidden sm:block absolute inset-0 z-0 opacity-40 blur-[100px] scale-110 bg-cover bg-center transition-all duration-500"
           style={{
-            backgroundImage: spark.backgroundTheme
+            background: spark.backgroundTheme
               ? spark.backgroundTheme
               : spark.image
                 ? `url(${spark.image})`
@@ -1311,7 +1311,7 @@ export function SparkViewer({
                 <div
                   className="absolute inset-0 z-0 opacity-40 blur-3xl scale-110 bg-cover bg-center transition-all duration-300"
                   style={{
-                    backgroundImage: spark.backgroundTheme
+                    background: spark.backgroundTheme
                       ? spark.backgroundTheme
                       : spark.image
                         ? `url(${spark.image})`
