@@ -71,7 +71,7 @@ function LiveCounter({ count }: { count: number }) {
 // "colored text post" pattern (Twitter/Threads-style). When bgColor isn't
 // set (e.g. older posts created before this feature, or reposts of them),
 // it falls back to the original deterministic gradient so nothing breaks.
-function TextPost({ post, onLike, onComment, onShare, onSave, onReact, navigate, onPickerDown, onPickerUp, pickerPostId, triggerReaction, onMediaClick }: any) {
+function TextPost({ post, onLike, onComment, onShare, onSave, onReact, navigate, onPickerDown, onPickerUp, pickerPostId, triggerReaction, onMediaClick, isBackgroundMuted }: any) {
   const gradients = [
     'from-[#1a0030] to-[#0d001a]',
     'from-[#001a30] to-[#00060d]',
@@ -119,7 +119,7 @@ function TextPost({ post, onLike, onComment, onShare, onSave, onReact, navigate,
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    if (isPlaying) {
+    if (isPlaying && !isBackgroundMuted) {
       audio.muted = muted;
       audio.play().catch(err => {
         console.warn("Audio playback failed on TextPost, trying muted autoplay:", err);
@@ -131,7 +131,7 @@ function TextPost({ post, onLike, onComment, onShare, onSave, onReact, navigate,
     } else {
       audio.pause();
     }
-  }, [isPlaying, muted]);
+  }, [isPlaying, muted, isBackgroundMuted]);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -468,13 +468,13 @@ function PollPost({ post, onLike, onComment, onShare, onSave, navigate, currentU
 // would've used. All interactions on the embedded post route back to the
 // real post id via updatePostById, so liking a quoted post behaves
 // identically to liking it in its native spot in the feed.
-function RepostCard({ post, onLike, onComment, onShare, onSave, onReact, navigate, onPickerDown, onPickerUp, pickerPostId, triggerReaction, onStoryBehind, currentUser, onMediaClick }: any) {
+function RepostCard({ post, onLike, onComment, onShare, onSave, onReact, navigate, onPickerDown, onPickerUp, pickerPostId, triggerReaction, onStoryBehind, currentUser, onMediaClick, isBackgroundMuted }: any) {
   const original = post.originalPost;
   if (!original) return null;
 
   const sharedProps = {
     post: original, onLike, onComment, onShare, onSave, onReact, navigate,
-    onPickerDown, onPickerUp, pickerPostId, triggerReaction, onStoryBehind, currentUser, onMediaClick,
+    onPickerDown, onPickerUp, pickerPostId, triggerReaction, onStoryBehind, currentUser, onMediaClick, isBackgroundMuted,
   };
 
   return (
@@ -526,7 +526,7 @@ function RepostCard({ post, onLike, onComment, onShare, onSave, onReact, navigat
 }
 
 // ─── Multi-image carousel ─────────────────────────────────────
-function MultiImagePost({ post, onLike, onComment, onShare, onSave, onReact, navigate, onPickerDown, onPickerUp, pickerPostId, triggerReaction, onMediaClick }: any) {
+function MultiImagePost({ post, onLike, onComment, onShare, onSave, onReact, navigate, onPickerDown, onPickerUp, pickerPostId, triggerReaction, onMediaClick, isBackgroundMuted }: any) {
   const [imgIdx, setImgIdx] = useState(0);
   const images = post.images || [post.image];
   const [isPlaying, setIsPlaying] = useState(false);
@@ -826,7 +826,7 @@ function PostActions({ post, onLike, onComment, onShare, onSave, onReact, naviga
 }
 
 // ─── Video-thumb post ─────────────────────────────────────────
-function VideoThumbPost({ post, onLike, onComment, onShare, onSave, onReact, navigate, onPickerDown, onPickerUp, pickerPostId, triggerReaction, onMediaClick }: any) {
+function VideoThumbPost({ post, onLike, onComment, onShare, onSave, onReact, navigate, onPickerDown, onPickerUp, pickerPostId, triggerReaction, onMediaClick, isBackgroundMuted }: any) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [muted, setMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -863,7 +863,7 @@ function VideoThumbPost({ post, onLike, onComment, onShare, onSave, onReact, nav
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    if (isPlaying) {
+    if (isPlaying && !isBackgroundMuted) {
       video.muted = muted;
       video.play().catch(err => {
         console.warn("Video playback failed, trying muted autoplay:", err);
@@ -876,7 +876,7 @@ function VideoThumbPost({ post, onLike, onComment, onShare, onSave, onReact, nav
     } else {
       video.pause();
     }
-  }, [isPlaying, muted]);
+  }, [isPlaying, muted, isBackgroundMuted]);
 
   useEffect(() => {
     if (videoRef.current) {
@@ -1001,7 +1001,7 @@ function VideoThumbPost({ post, onLike, onComment, onShare, onSave, onReact, nav
 }
 
 // ─── Standard image post ──────────────────────────────────────
-function ImagePost({ post, onLike, onComment, onShare, onSave, onReact, navigate, onPickerDown, onPickerUp, pickerPostId, triggerReaction, onStoryBehind, onMorePress, onMediaClick }: any) {
+function ImagePost({ post, onLike, onComment, onShare, onSave, onReact, navigate, onPickerDown, onPickerUp, pickerPostId, triggerReaction, onStoryBehind, onMorePress, onMediaClick, isBackgroundMuted }: any) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [muted, setMuted] = useState(true);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -3278,59 +3278,67 @@ export default function PulseScreen() {
       <div className="flex flex-col pt-4">
         {loading ? (
           Array.from({ length: 4 }).map((_, i) => <PostSkeleton key={i} />)
-        ) : displayedPosts.map((post, idx) => {
-          const uniqueKey = `${post.id || ""}_${idx}`;
-          if (post.type === 'suggested_user') return <SuggestedUserCard key={uniqueKey} post={post} />;
-          if (post.type === 'pulse_battle')   return <PulseBattleCard   key={uniqueKey} post={post} onVote={() => {}} />;
-          if (post.type === 'collab_post')    return <CollabPost         key={uniqueKey} post={post} onLike={handleLike} navigate={navigate} />;
-          if (post.type === 'repost')          return (
-            <RepostCard key={uniqueKey} post={post} onLike={handleLike}
-              onComment={setActiveCommentsPostId} onShare={(id: string, view?: string) => { if (view === 'send') setActiveSendPostId(id); else setActiveResharePostId(id); }}
-              onSave={handleSave} onReact={handleReact} navigate={navigate}
-              onPickerDown={handlePickerDown} onPickerUp={handlePickerUp}
-              pickerPostId={pickerPostId} triggerReaction={triggerReaction}
-              onStoryBehind={setStoryBehindPostId} onMediaClick={handleMediaClick} currentUser={currentUser} />
-          );
-          if (post.type === 'text')           return (
-            <TextPost key={uniqueKey} post={post} onLike={handleLike}
-              onComment={setActiveCommentsPostId} onShare={(id: string, view?: string) => { if (view === 'send') setActiveSendPostId(id); else setActiveResharePostId(id); }}
-              onSave={handleSave} onReact={handleReact} navigate={navigate}
-              onPickerDown={handlePickerDown} onPickerUp={handlePickerUp}
-              pickerPostId={pickerPostId} triggerReaction={triggerReaction} onMediaClick={handleMediaClick} />
-          );
-          if (post.type === 'poll')           return (
-            <PollPost key={uniqueKey} post={post} onLike={handleLike}
-              onComment={setActiveCommentsPostId} onShare={(id: string, view?: string) => { if (view === 'send') setActiveSendPostId(id); else setActiveResharePostId(id); }}
-              onSave={handleSave} navigate={navigate} currentUser={currentUser} />
-          );
-          if (post.type === 'multi_image')    return (
-            <MultiImagePost key={uniqueKey} post={post} onLike={handleLike}
-              onComment={setActiveCommentsPostId} onShare={(id: string, view?: string) => { if (view === 'send') setActiveSendPostId(id); else setActiveResharePostId(id); }}
-              onSave={handleSave} onReact={handleReact} navigate={navigate}
-              onPickerDown={handlePickerDown} onPickerUp={handlePickerUp}
-              pickerPostId={pickerPostId} triggerReaction={triggerReaction} onMediaClick={handleMediaClick} />
-          );
-          if (post.type === 'video_thumb')    return (
-            <VideoThumbPost key={uniqueKey} post={post} onLike={handleLike}
-              onComment={setActiveCommentsPostId} onShare={(id: string, view?: string) => { if (view === 'send') setActiveSendPostId(id); else setActiveResharePostId(id); }}
-              onSave={handleSave} onReact={handleReact} navigate={navigate}
-              onPickerDown={handlePickerDown} onPickerUp={handlePickerUp}
-              pickerPostId={pickerPostId} triggerReaction={triggerReaction} onMediaClick={handleMediaClick} />
-          );
-          return (
-            <ImagePost key={uniqueKey} post={post} onLike={handleLike}
-              onComment={setActiveCommentsPostId} onShare={(id: string, view?: string) => { if (view === 'send') setActiveSendPostId(id); else setActiveResharePostId(id); }}
-              onSave={handleSave} onReact={handleReact} navigate={navigate}
-              onPickerDown={handlePickerDown} onPickerUp={handlePickerUp}
-              pickerPostId={pickerPostId} triggerReaction={triggerReaction}
-              onStoryBehind={setStoryBehindPostId} onMediaClick={handleMediaClick}
-              onMorePress={(id: string) => {
-                const p = posts.find(x => x.id === id);
-                const isOwn = p && (p.handle === `@${currentUser?.handle}` || p.handle === currentUser?.handle);
-                if (isOwn) setCommentControlsPostId(id);
-              }} />
-          );
-        })}
+        ) : (() => {
+          const isBackgroundMuted = activeUserIndex !== null || isSparkCreatorOpen || !!storyBehindPostId || !!fullscreenMedia;
+          return displayedPosts.map((post, idx) => {
+            const uniqueKey = `${post.id || ""}_${idx}`;
+            if (post.type === 'suggested_user') return <SuggestedUserCard key={uniqueKey} post={post} />;
+            if (post.type === 'pulse_battle')   return <PulseBattleCard   key={uniqueKey} post={post} onVote={() => {}} />;
+            if (post.type === 'collab_post')    return <CollabPost         key={uniqueKey} post={post} onLike={handleLike} navigate={navigate} />;
+            if (post.type === 'repost')          return (
+              <RepostCard key={uniqueKey} post={post} onLike={handleLike}
+                onComment={setActiveCommentsPostId} onShare={(id: string, view?: string) => { if (view === 'send') setActiveSendPostId(id); else setActiveResharePostId(id); }}
+                onSave={handleSave} onReact={handleReact} navigate={navigate}
+                onPickerDown={handlePickerDown} onPickerUp={handlePickerUp}
+                pickerPostId={pickerPostId} triggerReaction={triggerReaction}
+                onStoryBehind={setStoryBehindPostId} onMediaClick={handleMediaClick} currentUser={currentUser}
+                isBackgroundMuted={isBackgroundMuted} />
+            );
+            if (post.type === 'text')           return (
+              <TextPost key={uniqueKey} post={post} onLike={handleLike}
+                onComment={setActiveCommentsPostId} onShare={(id: string, view?: string) => { if (view === 'send') setActiveSendPostId(id); else setActiveResharePostId(id); }}
+                onSave={handleSave} onReact={handleReact} navigate={navigate}
+                onPickerDown={handlePickerDown} onPickerUp={handlePickerUp}
+                pickerPostId={pickerPostId} triggerReaction={triggerReaction} onMediaClick={handleMediaClick}
+                isBackgroundMuted={isBackgroundMuted} />
+            );
+            if (post.type === 'poll')           return (
+              <PollPost key={uniqueKey} post={post} onLike={handleLike}
+                onComment={setActiveCommentsPostId} onShare={(id: string, view?: string) => { if (view === 'send') setActiveSendPostId(id); else setActiveResharePostId(id); }}
+                onSave={handleSave} navigate={navigate} currentUser={currentUser} />
+            );
+            if (post.type === 'multi_image')    return (
+              <MultiImagePost key={uniqueKey} post={post} onLike={handleLike}
+                onComment={setActiveCommentsPostId} onShare={(id: string, view?: string) => { if (view === 'send') setActiveSendPostId(id); else setActiveResharePostId(id); }}
+                onSave={handleSave} onReact={handleReact} navigate={navigate}
+                onPickerDown={handlePickerDown} onPickerUp={handlePickerUp}
+                pickerPostId={pickerPostId} triggerReaction={triggerReaction} onMediaClick={handleMediaClick}
+                isBackgroundMuted={isBackgroundMuted} />
+            );
+            if (post.type === 'video_thumb')    return (
+              <VideoThumbPost key={uniqueKey} post={post} onLike={handleLike}
+                onComment={setActiveCommentsPostId} onShare={(id: string, view?: string) => { if (view === 'send') setActiveSendPostId(id); else setActiveResharePostId(id); }}
+                onSave={handleSave} onReact={handleReact} navigate={navigate}
+                onPickerDown={handlePickerDown} onPickerUp={handlePickerUp}
+                pickerPostId={pickerPostId} triggerReaction={triggerReaction} onMediaClick={handleMediaClick}
+                isBackgroundMuted={isBackgroundMuted} />
+            );
+            return (
+              <ImagePost key={uniqueKey} post={post} onLike={handleLike}
+                onComment={setActiveCommentsPostId} onShare={(id: string, view?: string) => { if (view === 'send') setActiveSendPostId(id); else setActiveResharePostId(id); }}
+                onSave={handleSave} onReact={handleReact} navigate={navigate}
+                onPickerDown={handlePickerDown} onPickerUp={handlePickerUp}
+                pickerPostId={pickerPostId} triggerReaction={triggerReaction}
+                onStoryBehind={setStoryBehindPostId} onMediaClick={handleMediaClick}
+                onMorePress={(id: string) => {
+                  const p = posts.find(x => x.id === id);
+                  const isOwn = p && (p.handle === `@${currentUser?.handle}` || p.handle === currentUser?.handle);
+                  if (isOwn) setCommentControlsPostId(id);
+                }}
+                isBackgroundMuted={isBackgroundMuted} />
+            );
+          });
+        })()}
 
         {isLoadingMore && (
           <div className="flex flex-col gap-4 pt-2">
