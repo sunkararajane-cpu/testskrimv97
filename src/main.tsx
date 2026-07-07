@@ -7,29 +7,33 @@ import { mockUsers, mockReels } from './lib/mock/mockData';
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').then((registration) => {
-      // SW registered
-    }).catch(err => {
-      console.log('SW registration failed: ', err);
-    });
-    
-    // Listen for messages from SW
-    navigator.serviceWorker.addEventListener('message', (event) => {
-      if (event.data && event.data.type === 'REMIND_LATER') {
-        const now = new Date();
-        const reminder9PM = new Date();
-        reminder9PM.setHours(21, 0, 0, 0); // 9 PM
-        if (now < reminder9PM) {
-          const delay = reminder9PM.getTime() - now.getTime();
-          setTimeout(() => {
-            const { atRisk, grindCount } = checkGrindRisk();
-            if (atRisk) {
-              showGrindNotification(grindCount);
-            }
-          }, delay);
+    try {
+      navigator.serviceWorker.register('/sw.js').then((registration) => {
+        // SW registered
+      }).catch(err => {
+        console.log('SW registration failed: ', err);
+      });
+      
+      // Listen for messages from SW
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'REMIND_LATER') {
+          const now = new Date();
+          const reminder9PM = new Date();
+          reminder9PM.setHours(21, 0, 0, 0); // 9 PM
+          if (now < reminder9PM) {
+            const delay = reminder9PM.getTime() - now.getTime();
+            setTimeout(() => {
+              const { atRisk, grindCount } = checkGrindRisk();
+              if (atRisk) {
+                showGrindNotification(grindCount);
+              }
+            }, delay);
+          }
         }
-      }
-    });
+      });
+    } catch (e) {
+      console.warn('Service workers are blocked or not supported in this frame environment:', e);
+    }
   });
 }
 
