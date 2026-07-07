@@ -1423,6 +1423,15 @@ export function SparkViewer({
     return s.timeAgo || "1h";
   };
 
+  const getReplyTimeAgo = (timestamp?: number) => {
+    if (!timestamp) return "Just now";
+    const diff = Date.now() - timestamp;
+    if (diff < 60000) return "Just now";
+    if (diff < 3600000) return Math.floor(diff / 60000) + "m";
+    if (diff < 86400000) return Math.floor(diff / 3600000) + "h";
+    return Math.floor(diff / 86400000) + "d";
+  };
+
   if (!spark) return null;
 
   return (
@@ -2145,34 +2154,6 @@ export function SparkViewer({
                           </div>
                         </div>
                       )}
-
-                      {/* Ephemeral Real-time Glassmorphic Comments Stream */}
-                      {sparkReplies.length > 0 && (
-                        <div className="mt-3 pointer-events-auto flex flex-col gap-1.5 max-h-[140px] overflow-y-auto no-scrollbar py-1">
-                          {sparkReplies.map((reply: any, index: number) => (
-                            <motion.div
-                              initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                              animate={{ opacity: 1, y: 0, scale: 1 }}
-                              key={reply.id || index}
-                              className="flex items-start gap-2 bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl px-3 py-1.5 w-max max-w-[90%] shadow-lg"
-                            >
-                              <img
-                                src={reply.user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${reply.user?.username || 'user'}`}
-                                alt={reply.user?.displayName || 'User'}
-                                className="w-5 h-5 rounded-full object-cover border border-white/20 shrink-0"
-                              />
-                              <div className="flex-1 min-w-0">
-                                <span className="text-[10px] text-white/60 font-bold tracking-tight block">
-                                  {reply.user?.displayName || 'Someone'}
-                                </span>
-                                <span className="text-xs text-white leading-normal break-words">
-                                  {reply.text}
-                                </span>
-                              </div>
-                            </motion.div>
-                          ))}
-                        </div>
-                      )}
                     </div>
                   </div>
 
@@ -2272,7 +2253,7 @@ export function SparkViewer({
                               >
                                 <MessageCircle className="w-5 h-5 text-white" />
                                 <span className="text-white text-sm font-semibold">
-                                  Reply
+                                  Reply {sparkReplies.length > 0 && `• ${sparkReplies.length}`}
                                 </span>
                               </button>
                               {spark.isChallenge && (
@@ -2627,6 +2608,44 @@ export function SparkViewer({
                           {getSparkTimeAgo(spark)} • {spark.views || 0} views
                         </p>
                       </div>
+                    </div>
+
+                    {/* Previous Replies List */}
+                    <div className="mb-6">
+                      <p className="text-xs text-gray-400 font-bold mb-3 uppercase tracking-wider">
+                        Previous Replies ({sparkReplies.length})
+                      </p>
+                      {sparkReplies.length === 0 ? (
+                        <p className="text-xs text-white/40 italic">No replies yet. Be the first to pulse a reply! ⚡</p>
+                      ) : (
+                        <div className="flex flex-col gap-2.5 max-h-[180px] overflow-y-auto no-scrollbar pr-1">
+                          {sparkReplies.map((reply: any, index: number) => (
+                            <div
+                              key={reply.id || index}
+                              className="flex items-start gap-2.5 bg-white/5 border border-white/5 rounded-xl p-2.5"
+                            >
+                              <img
+                                src={reply.user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${reply.user?.username || 'user'}`}
+                                alt=""
+                                className="w-6 h-6 rounded-full object-cover border border-white/10 shrink-0"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-[11px] text-white/70 font-bold">
+                                    {reply.user?.displayName || 'Someone'}
+                                  </span>
+                                  <span className="text-[9px] text-white/40">
+                                    {getReplyTimeAgo(reply.timestamp)}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-white leading-normal mt-0.5 break-words">
+                                  {reply.text}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     <div className="mb-4">
@@ -3211,6 +3230,100 @@ export function SparkViewer({
                       >
                         {isHighlightMode ? "Remove" : "Delete"}
                       </button>
+                    </div>
+                  </div>
+                )}
+
+                {activeSheet === "insights" && (
+                  <div className="px-5 pb-8">
+                    <div className="flex justify-between items-center mb-5">
+                      <h3 className="font-bold text-white text-lg flex items-center gap-2">
+                        📊 Spark Insights
+                      </h3>
+                      <button
+                        onClick={() => setActiveSheet(null)}
+                        className="p-1.5 bg-white/10 rounded-full hover:bg-white/20 transition-colors"
+                      >
+                        <X className="w-5 h-5 text-white" />
+                      </button>
+                    </div>
+
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-2 gap-3 mb-6">
+                      <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
+                        <span className="text-2xl mb-1 block">👁️</span>
+                        <p className="text-white text-xl font-black">
+                          {(spark.views || 0).toLocaleString()}
+                        </p>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-1">Total Views</p>
+                      </div>
+                      <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
+                        <span className="text-2xl mb-1 block">💬</span>
+                        <p className="text-white text-xl font-black">
+                          {sparkReplies.length}
+                        </p>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-1">Replies</p>
+                      </div>
+                    </div>
+
+                    {/* Reactions section */}
+                    <div className="mb-6">
+                      <p className="text-xs text-gray-400 font-bold mb-3 uppercase tracking-wider">
+                        Reactions
+                      </p>
+                      {(!spark.reactions || Object.keys(spark.reactions).length === 0) ? (
+                        <p className="text-xs text-white/40 italic">No reactions yet. Share this Spark to get noticed! ⚡</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {Object.entries(spark.reactions).map(([emoji, count]: [string, any]) => (
+                            <div
+                              key={emoji}
+                              className="bg-white/15 border border-white/25 rounded-full px-3.5 py-1.5 flex items-center gap-1.5 text-sm font-bold text-white"
+                            >
+                              <span>{emoji}</span>
+                              <span>{count}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Replies section */}
+                    <div>
+                      <p className="text-xs text-gray-400 font-bold mb-3 uppercase tracking-wider">
+                        Replies ({sparkReplies.length})
+                      </p>
+                      {sparkReplies.length === 0 ? (
+                        <p className="text-xs text-white/40 italic">No replies yet. Your fans will see this on their feed! 💎</p>
+                      ) : (
+                        <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto no-scrollbar pr-1">
+                          {sparkReplies.map((reply: any, index: number) => (
+                            <div
+                              key={reply.id || index}
+                              className="flex items-start gap-2.5 bg-white/5 border border-white/5 rounded-xl p-2.5"
+                            >
+                              <img
+                                src={reply.user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${reply.user?.username || 'user'}`}
+                                alt=""
+                                className="w-6 h-6 rounded-full object-cover border border-white/10 shrink-0"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-[11px] text-white/70 font-bold">
+                                    {reply.user?.displayName || 'Someone'}
+                                  </span>
+                                  <span className="text-[9px] text-white/40">
+                                    {getReplyTimeAgo(reply.timestamp)}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-white leading-normal mt-0.5 break-words">
+                                  {reply.text}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
