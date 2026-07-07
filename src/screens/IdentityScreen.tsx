@@ -216,7 +216,7 @@ export default function IdentityScreen() {
     const fetchActiveSparks = () => {
       getSparks().then((all) => {
         const now = Date.now();
-        const userActive = all.filter((s: any) => s.isOwn && s.expiresAt && s.expiresAt > now);
+        const userActive = Array.isArray(all) ? all.filter((s: any) => s && s.isOwn && s.expiresAt && s.expiresAt > now) : [];
         setActiveSparks(userActive);
       }).catch(() => setActiveSparks([]));
     };
@@ -1694,8 +1694,8 @@ export default function IdentityScreen() {
              }
              // Let's remove it from activeHighlightGroup if there
              setActiveHighlightGroup(prev => {
-                if (prev.length === 0) return prev;
-                const newSparks = prev[0].sparks.filter((s:any) => s.id !== sparkId);
+                if (prev.length === 0 || !prev[0]) return prev;
+                const newSparks = (prev[0].sparks || []).filter((s: any) => s && s.id !== sparkId);
                 if (newSparks.length === 0) {
                   setTimeout(() => setActiveHighlightGroup([]), 100);
                   return [];
