@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
+import { getSparks } from "../lib/mock/mockServices";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router-dom";
 import { PulseSendSheet } from './PulseSheets';
@@ -182,6 +183,78 @@ export function SparkThumbnail({ spark, className = "w-full h-full object-cover"
   );
 }
 
+const stripBase64FromSpark = (spark: any) => {
+  if (!spark) return spark;
+  const copy = { ...spark };
+  if (typeof copy.image === 'string' && copy.image.startsWith('data:')) {
+    copy.image = `__base64_ref__:${copy.id}`;
+  }
+  if (typeof copy.video === 'string' && copy.video.startsWith('data:')) {
+    copy.video = `__base64_ref__:${copy.id}`;
+  }
+  if (typeof copy.audioUrl === 'string' && copy.audioUrl.startsWith('data:')) {
+    copy.audioUrl = `__base64_ref__:${copy.id}`;
+  }
+  if (typeof copy.music_url === 'string' && copy.music_url.startsWith('data:')) {
+    copy.music_url = `__base64_ref__:${copy.id}`;
+  }
+  if (Array.isArray(copy.images)) {
+    copy.images = copy.images.map((img: any, idx: number) => {
+      if (typeof img === 'string' && img.startsWith('data:')) {
+        return `__base64_ref_img_${idx}__:${copy.id}`;
+      }
+      return img;
+    });
+  }
+  return copy;
+};
+
+const restoreHighlights = (highlightsList: any[], allSparks: any[]): any[] => {
+  if (!Array.isArray(highlightsList)) return [];
+  if (!Array.isArray(allSparks)) return highlightsList;
+
+  return highlightsList.map((hl: any) => {
+    // Restore cover if it was stripped
+    let cover = hl.cover;
+    if (typeof cover === 'string' && cover.startsWith('__base64_cover__')) {
+      const sparkId = cover.split(':')[1];
+      const foundCover = allSparks.find((os: any) => os.id === sparkId);
+      if (foundCover) {
+        cover = foundCover.image || foundCover.videoImageHover || foundCover.videoImage || "purple";
+      }
+    }
+
+    return {
+      ...hl,
+      cover,
+      sparks: Array.isArray(hl.sparks) ? hl.sparks.map((s: any) => {
+        const originalId = s.id || s.originalSparkId;
+        const found = allSparks.find((os: any) => os.id === originalId);
+        if (found) {
+          const restored = { ...s };
+          if (typeof restored.image === 'string' && restored.image.startsWith('__base64_ref__')) {
+            restored.image = found.image;
+          }
+          if (typeof restored.video === 'string' && restored.video.startsWith('__base64_ref__')) {
+            restored.video = found.video;
+          }
+          if (typeof restored.audioUrl === 'string' && restored.audioUrl.startsWith('__base64_ref__')) {
+            restored.audioUrl = found.audioUrl;
+          }
+          if (typeof restored.music_url === 'string' && restored.music_url.startsWith('__base64_ref__')) {
+            restored.music_url = found.music_url;
+          }
+          if (Array.isArray(restored.images) && Array.isArray(found.images)) {
+            restored.images = found.images;
+          }
+          return restored;
+        }
+        return s;
+      }) : []
+    };
+  });
+};
+
 export function SparkViewer({
   groupedSparks,
   initialUserIndex,
@@ -355,6 +428,19 @@ export function SparkViewer({
   const [highlights, setHighlights] = useState<any[]>([]);
   const [newHighlightName, setNewHighlightName] = useState("");
   const [newHighlightEmoji, setNewHighlightEmoji] = useState("✨");
+  const [allSparks, setAllSparks] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (activeSheet === "highlight" || activeSheet === "create-highlight" || activeSheet === "highlight-options") {
+      getSparks().then((sp) => {
+        setAllSparks(sp || []);
+      }).catch(() => {});
+    }
+  }, [activeSheet]);
+
+  const restoredHighlights = useMemo(() => {
+    return restoreHighlights(highlights, allSparks);
+  }, [highlights, allSparks]);
   const [showEndScreen, setShowEndScreen] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
   const [isMuted, setIsMuted] = useState(false);
@@ -803,7 +889,7 @@ export function SparkViewer({
         updatedHl.cover =
           spark.type === "text"
             ? spark.backgroundTheme || spark.background
-            : spark.image ||
+            : (typeof spark.image === 'string' && spark.image.startsWith('data:') ? `__base64_cover__:${spark.id}` : spark.image) ||
               spark.videoImageHover ||
               spark.videoImage ||
               updatedHl.cover;
@@ -811,8 +897,12 @@ export function SparkViewer({
 
       const newList = [...currentHighlights];
       newList[hlIndex] = updatedHl;
-      localStorage.setItem("skrimchat_highlights", JSON.stringify(newList));
-      setHighlights(newList);
+      const strippedList = newList.map((hl: any) => ({
+        ...hl,
+        sparks: Array.isArray(hl.sparks) ? hl.sparks.map((s: any) => stripBase64FromSpark(s)) : []
+      }));
+      localStorage.setItem("skrimchat_highlights", JSON.stringify(strippedList));
+      setHighlights(strippedList);
       window.dispatchEvent(new Event("highlightSaved"));
 
       showToast("Done Added to Highlight!");
@@ -853,15 +943,19 @@ export function SparkViewer({
       cover:
         spark.type === "text"
           ? spark.backgroundTheme || spark.background
-          : spark.image ||
+          : (typeof spark.image === 'string' && spark.image.startsWith('data:') ? `__base64_cover__:${spark.id}` : spark.image) ||
             spark.videoImageHover ||
             spark.videoImage ||
             "purple",
       sparks: [highlightCopy],
     };
     const newList = [...currentHighlights, newHl];
-    localStorage.setItem("skrimchat_highlights", JSON.stringify(newList));
-    setHighlights(newList);
+    const strippedList = newList.map((hl: any) => ({
+      ...hl,
+      sparks: Array.isArray(hl.sparks) ? hl.sparks.map((s: any) => stripBase64FromSpark(s)) : []
+    }));
+    localStorage.setItem("skrimchat_highlights", JSON.stringify(strippedList));
+    setHighlights(strippedList);
     window.dispatchEvent(new Event("highlightSaved"));
     showToast("Done New Highlight created!");
     setNewHighlightName("");
@@ -1259,7 +1353,7 @@ export function SparkViewer({
                 onClose();
               }
             }}
-            className="relative w-full h-full sm:w-[400px] sm:h-[90vh] sm:max-h-[850px] sm:rounded-[32px] bg-black sm:overflow-hidden flex flex-col shadow-2xl sm:border sm:border-white/20 z-10 overflow-y-auto"
+            className="relative w-full h-full sm:w-[400px] sm:h-[90vh] sm:max-h-[850px] sm:rounded-[32px] bg-black overflow-hidden flex flex-col shadow-2xl sm:border sm:border-white/20 z-10"
           >
             {!spark ? (
               <div className="flex-1 flex flex-col pt-safe-top pb-safe-bottom relative bg-[#121212] items-center justify-center p-8 text-center h-full">
@@ -2740,12 +2834,12 @@ export function SparkViewer({
                     </button>
 
                     <div className="max-h-[300px] overflow-y-auto flex flex-col gap-2 mt-1 pr-1">
-                      {highlights.length === 0 ? (
+                      {restoredHighlights.length === 0 ? (
                         <div className="text-center py-8 text-gray-500 text-sm">
                           No highlights created yet. Create one above!
                         </div>
                       ) : (
-                        highlights.map((hl, i) => {
+                        restoredHighlights.map((hl, i) => {
                           const cover = hl.cover;
                           const isImg = cover?.startsWith('http') || cover?.startsWith('data:');
                           const bgs: Record<string, string> = {

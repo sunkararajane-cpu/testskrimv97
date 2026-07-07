@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Edit3, Share, Camera, MapPin, Link as LinkIcon, Plus, X, Zap, Eye, Calendar, Smile, Bookmark, Repeat, User as UserIcon, LogOut, Settings, Bell, Users, BarChart3, DollarSign, Shield, PlaySquare, Heart, MessageCircle, Check, Download, Timer, Archive, Pin, PinOff, QrCode } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { getAllRecords, deleteRecord, saveRecord } from '../lib/services/mediaStorage';
@@ -28,6 +28,78 @@ import { HighlightAvatar } from '../components/HighlightAvatar';
 import { getArchivedSparks, getSparks } from '../lib/mock/mockServices';
 import { AccessibilitySettingsSheet } from '../components/AccessibilitySettingsSheet';
 import { QRScannerSheet } from '../components/QRScannerSheet';
+
+const stripBase64FromSpark = (spark: any) => {
+  if (!spark) return spark;
+  const copy = { ...spark };
+  if (typeof copy.image === 'string' && copy.image.startsWith('data:')) {
+    copy.image = `__base64_ref__:${copy.id}`;
+  }
+  if (typeof copy.video === 'string' && copy.video.startsWith('data:')) {
+    copy.video = `__base64_ref__:${copy.id}`;
+  }
+  if (typeof copy.audioUrl === 'string' && copy.audioUrl.startsWith('data:')) {
+    copy.audioUrl = `__base64_ref__:${copy.id}`;
+  }
+  if (typeof copy.music_url === 'string' && copy.music_url.startsWith('data:')) {
+    copy.music_url = `__base64_ref__:${copy.id}`;
+  }
+  if (Array.isArray(copy.images)) {
+    copy.images = copy.images.map((img: any, idx: number) => {
+      if (typeof img === 'string' && img.startsWith('data:')) {
+        return `__base64_ref_img_${idx}__:${copy.id}`;
+      }
+      return img;
+    });
+  }
+  return copy;
+};
+
+const restoreHighlights = (highlightsList: any[], allSparks: any[]): any[] => {
+  if (!Array.isArray(highlightsList)) return [];
+  if (!Array.isArray(allSparks)) return highlightsList;
+
+  return highlightsList.map((hl: any) => {
+    // Restore cover if it was stripped
+    let cover = hl.cover;
+    if (typeof cover === 'string' && cover.startsWith('__base64_cover__')) {
+      const sparkId = cover.split(':')[1];
+      const foundCover = allSparks.find((os: any) => os.id === sparkId);
+      if (foundCover) {
+        cover = foundCover.image || foundCover.videoImageHover || foundCover.videoImage || "purple";
+      }
+    }
+
+    return {
+      ...hl,
+      cover,
+      sparks: Array.isArray(hl.sparks) ? hl.sparks.map((s: any) => {
+        const originalId = s.id || s.originalSparkId;
+        const found = allSparks.find((os: any) => os.id === originalId);
+        if (found) {
+          const restored = { ...s };
+          if (typeof restored.image === 'string' && restored.image.startsWith('__base64_ref__')) {
+            restored.image = found.image;
+          }
+          if (typeof restored.video === 'string' && restored.video.startsWith('__base64_ref__')) {
+            restored.video = found.video;
+          }
+          if (typeof restored.audioUrl === 'string' && restored.audioUrl.startsWith('__base64_ref__')) {
+            restored.audioUrl = found.audioUrl;
+          }
+          if (typeof restored.music_url === 'string' && restored.music_url.startsWith('__base64_ref__')) {
+            restored.music_url = found.music_url;
+          }
+          if (Array.isArray(restored.images) && Array.isArray(found.images)) {
+            restored.images = found.images;
+          }
+          return restored;
+        }
+        return s;
+      }) : []
+    };
+  });
+};
 
 const CountUp = ({ end, decimals = 0, suffix = "", prefix = "" }: { end: number, decimals?: number, suffix?: string, prefix?: string }) => {
   const [count, setCount] = useState(0);
@@ -159,6 +231,10 @@ export default function IdentityScreen() {
   const [highlights, setHighlights] = useState<any[]>([]);
   const [archivedSparks, setArchivedSparks] = useState<any[]>([]);
   const [activeSparks, setActiveSparks] = useState<any[]>([]);
+  const restoredHighlights = useMemo(() => {
+    const allSparks = [...activeSparks, ...archivedSparks];
+    return restoreHighlights(highlights, allSparks);
+  }, [highlights, activeSparks, archivedSparks]);
   const [showArchiveSheet, setShowArchiveSheet] = useState(false);
   const [activeHighlightGroup, setActiveHighlightGroup] = useState<any[]>([]);
   const [activeHighlightName, setActiveHighlightName] = useState<string>('');
@@ -919,7 +995,7 @@ export default function IdentityScreen() {
               </button>
             )}
 
-            {highlights.map((h, i) => {
+            {restoredHighlights.map((h, i) => {
               const cover = h.cover;
               const isImage = cover?.startsWith('http') || cover?.startsWith('data:');
               const bgs: Record<string, string> = {
