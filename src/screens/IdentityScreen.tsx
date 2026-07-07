@@ -25,7 +25,7 @@ import { useDailyMissions } from '../lib/mock/achievementEngine';
 import { SparkViewer } from '../components/SparkViewer';
 import ImageEditor, { EditorMode } from '../components/ImageEditor';
 import { HighlightAvatar } from '../components/HighlightAvatar';
-import { getArchivedSparks } from '../lib/mock/mockServices';
+import { getArchivedSparks, getSparks } from '../lib/mock/mockServices';
 import { AccessibilitySettingsSheet } from '../components/AccessibilitySettingsSheet';
 import { QRScannerSheet } from '../components/QRScannerSheet';
 
@@ -158,6 +158,7 @@ export default function IdentityScreen() {
   const [activeStatType, setActiveStatType] = useState<'pulse' | 'blaze' | 'views' | 'vibe' | null>(null);
   const [highlights, setHighlights] = useState<any[]>([]);
   const [archivedSparks, setArchivedSparks] = useState<any[]>([]);
+  const [activeSparks, setActiveSparks] = useState<any[]>([]);
   const [showArchiveSheet, setShowArchiveSheet] = useState(false);
   const [activeHighlightGroup, setActiveHighlightGroup] = useState<any[]>([]);
   const [activeHighlightName, setActiveHighlightName] = useState<string>('');
@@ -208,6 +209,27 @@ export default function IdentityScreen() {
     fetchArchived();
     const intv = setInterval(fetchArchived, 30000);
     return () => clearInterval(intv);
+  }, []);
+
+  // Fetch active Sparks for profile avatar viewing and highlighting
+  useEffect(() => {
+    const fetchActiveSparks = () => {
+      getSparks().then((all) => {
+        const now = Date.now();
+        const userActive = all.filter((s: any) => s.isOwn && s.expiresAt && s.expiresAt > now);
+        setActiveSparks(userActive);
+      }).catch(() => setActiveSparks([]));
+    };
+    fetchActiveSparks();
+    const handleSparkSaved = () => fetchActiveSparks();
+    window.addEventListener('skrimchat_custom_posts_updated', handleSparkSaved);
+    window.addEventListener('highlightSaved', handleSparkSaved);
+    const intv = setInterval(fetchActiveSparks, 10000);
+    return () => {
+      clearInterval(intv);
+      window.removeEventListener('skrimchat_custom_posts_updated', handleSparkSaved);
+      window.removeEventListener('highlightSaved', handleSparkSaved);
+    };
   }, []);
 
   useEffect(() => {
@@ -665,6 +687,19 @@ export default function IdentityScreen() {
     }]);
   };
 
+  const handleOpenActiveSparks = () => {
+    setActiveHighlightName('My Sparks');
+    setIsHighlightViewer(false);
+    setActiveHighlightGroup([{
+      userId: user?.id || 'me',
+      id: user?.id || 'me',
+      user: { id: user?.id || 'me', displayName: user?.fullName || 'You', username: user?.username || '', avatar: user?.avatar },
+      isOwn: true,
+      sparks: activeSparks,
+      hasViewed: true,
+    }]);
+  };
+
   if (!user) return <div className="p-8 text-center text-white">Loading...</div>;
 
   const currentCover = user.cover || "none"; // Using none to show gradient
@@ -866,6 +901,23 @@ export default function IdentityScreen() {
               </div>
               <span className="text-[11px] font-semibold text-gray-400 group-hover:text-white mt-1">New</span>
             </button>
+
+            {activeSparks.length > 0 && (
+              <button
+                onClick={handleOpenActiveSparks}
+                className="flex flex-col items-center gap-2 shrink-0 group text-left cursor-pointer"
+              >
+                <div className="w-16 h-16 rounded-full p-[3px] bg-gradient-to-br from-[#B026FF] via-[#FF00D6] to-[#00F0FF] flex items-center justify-center relative active:scale-95 transition-all shadow-[0_0_12px_rgba(176,38,255,0.4)] animate-pulse">
+                  <div className="w-full h-full rounded-full border-2 border-skrim-bg overflow-hidden bg-black flex items-center justify-center">
+                    <span className="text-xl">⚡</span>
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 bg-[#B026FF] text-[8px] font-bold text-white px-1.5 py-0.5 rounded-full border border-skrim-bg">
+                    LIVE
+                  </div>
+                </div>
+                <span className="text-[11px] font-bold text-[#B026FF] group-hover:text-white mt-1">My Sparks</span>
+              </button>
+            )}
 
             {highlights.map((h, i) => {
               const cover = h.cover;
@@ -1631,6 +1683,14 @@ export default function IdentityScreen() {
                    window.dispatchEvent(new Event('highlightSaved'));
                  }
                }
+             } else {
+               // Active sparks deleting logic
+               setActiveSparks(prev => prev.filter(s => s.id !== sparkId));
+               deleteRecord('sparks', sparkId).then(() => {
+                 window.dispatchEvent(new Event('skrimchat_custom_posts_updated'));
+                 setToastMessage("🗑️ Spark deleted");
+                 setTimeout(() => setToastMessage(""), 3000);
+               }).catch(e => console.error("Failed to delete active spark:", e));
              }
              // Let's remove it from activeHighlightGroup if there
              setActiveHighlightGroup(prev => {
