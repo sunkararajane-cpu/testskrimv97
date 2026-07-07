@@ -844,12 +844,6 @@ function FullCelebration({
               </button>
             )}
             <button
-              onClick={onShare}
-              className="w-full py-2.5 rounded-full font-bold text-white text-xs bg-white/10 transition-all hover:bg-white/20 flex items-center justify-center gap-2 border border-white/10"
-            >
-              🔗 Share Achievement
-            </button>
-            <button
               onClick={onClose}
               className="w-full py-3.5 rounded-full font-bold text-white text-sm transition-all hover:brightness-110 flex items-center justify-center gap-2 shadow-[0_0_15px_currentColor]"
               style={{
