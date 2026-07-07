@@ -1432,6 +1432,48 @@ export function SparkViewer({
     return Math.floor(diff / 86400000) + "d";
   };
 
+  const getMoodInfo = (mood?: string) => {
+    if (!mood) return null;
+    const m = mood.toLowerCase();
+    
+    // Map standard mood IDs to emojis and names
+    if (m === 'funny') return { emoji: '😂', label: 'Funny', bg: 'bg-yellow-500/25 text-yellow-300 border-yellow-500/30' };
+    if (m === 'trending') return { emoji: '🔥', label: 'Trending', bg: 'bg-orange-500/25 text-orange-300 border-orange-500/30' };
+    if (m === 'chill') return { emoji: '💜', label: 'Chill', bg: 'bg-purple-500/25 text-purple-300 border-purple-500/30' };
+    if (m === 'inspire') return { emoji: '🚀', label: 'Inspire', bg: 'bg-blue-500/25 text-blue-300 border-blue-500/30' };
+    if (m === 'unhinged') return { emoji: '💀', label: 'Unhinged', bg: 'bg-red-500/25 text-red-300 border-red-500/30' };
+
+    // Parse SparkCreator custom emojis
+    const emojiMatch = mood.match(/[\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u);
+    const emoji = emojiMatch ? emojiMatch[0] : '✨';
+    let label = mood.replace(emoji, '').trim();
+    if (!label) {
+      if (emoji === '🔥') label = 'Fire';
+      else if (emoji === '😊') label = 'Happy';
+      else if (emoji === '💫') label = 'Vibes';
+      else if (emoji === '😂') label = 'LOL';
+      else if (emoji === '😍') label = 'Obsessed';
+      else if (emoji === '🤩') label = 'Hyped';
+      else if (emoji === '😤') label = 'Motivated';
+      else if (emoji === '💀') label = 'Dead';
+      else if (emoji === '🌊') label = 'Chill';
+      else if (emoji === '✨') label = 'Aesthetic';
+      else if (emoji === '💪') label = 'Grind';
+      else if (emoji === '🥺') label = 'Soft';
+      else label = 'Feeling';
+    }
+
+    let bg = 'bg-white/10 text-white/90 border-white/20';
+    if (emoji === '🔥' || emoji === '😤' || emoji === '💪') bg = 'bg-orange-500/25 text-orange-300 border-orange-500/30';
+    else if (emoji === '😂' || emoji === '😊' || emoji === '🤩') bg = 'bg-yellow-500/25 text-yellow-300 border-yellow-500/30';
+    else if (emoji === '💜' || emoji === '✨' || emoji === '💫') bg = 'bg-purple-500/25 text-purple-300 border-purple-500/30';
+    else if (emoji === '🚀' || emoji === '🌊') bg = 'bg-blue-500/25 text-blue-300 border-blue-500/30';
+    else if (emoji === '💀') bg = 'bg-red-500/25 text-red-300 border-red-500/30';
+    else if (emoji === '🥺') bg = 'bg-pink-500/25 text-pink-300 border-pink-500/30';
+
+    return { emoji, label, bg };
+  };
+
   if (!spark) return null;
 
   return (
@@ -1844,15 +1886,21 @@ export function SparkViewer({
                                 key={`span-collab-${group.userId || "group"}_${userIndex}`}
                                 initial={{ opacity: 0, y: 5 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="font-semibold text-[15px] leading-tight text-white whitespace-nowrap overflow-hidden text-ellipsis max-w-[150px]"
+                                className="font-semibold text-[15px] leading-tight text-white whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]"
                               >
                                 {(spark.creator?.displayName || spark.creator?.username || group.user?.displayName || group.user?.username)?.split(' ')[0]} 
                                 &amp; 
                                 {(spark.collabPartner?.displayName || spark.collabPartner?.username)?.split(' ')[0]}
                               </motion.span>
-                              <div className="bg-white/20 rounded px-1 py-0.5 flex items-center justify-center">
+                              <div className="bg-white/20 rounded px-1 py-0.5 flex items-center justify-center shrink-0">
                                 <span className="text-[8px] font-bold text-white tracking-wider">COLLAB</span>
                               </div>
+                              {getMoodInfo(spark.mood) && (
+                                <div className={`px-1.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider border flex items-center gap-1 shrink-0 animate-pulse shadow-sm ${getMoodInfo(spark.mood)?.bg}`}>
+                                  <span>{getMoodInfo(spark.mood)?.emoji}</span>
+                                  <span>{getMoodInfo(spark.mood)?.label}</span>
+                                </div>
+                              )}
                             </div>
                             <span className="text-[12px] font-medium text-gray-300 leading-tight">
                               @{((spark.creator?.username || group.user?.username) || '').replace('@', '')} &amp; @{(spark.collabPartner?.username || '').replace('@', '')}
@@ -1874,6 +1922,12 @@ export function SparkViewer({
                                   group?.user?.user ||
                                   group?.user?.username}
                               </motion.span>
+                              {getMoodInfo(spark.mood) && (
+                                <div className={`px-1.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider border flex items-center gap-1 shrink-0 animate-pulse shadow-sm ${getMoodInfo(spark.mood)?.bg}`}>
+                                  <span>{getMoodInfo(spark.mood)?.emoji}</span>
+                                  <span>{getMoodInfo(spark.mood)?.label}</span>
+                                </div>
+                              )}
                             </div>
                             <span className="text-[12px] font-medium text-gray-300 leading-tight">
                               @
