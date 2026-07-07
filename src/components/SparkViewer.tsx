@@ -1913,7 +1913,7 @@ export function SparkViewer({
                           <>
                             <div className="flex items-center gap-1.5 mb-0.5">
                               <motion.span
-                                key={group.userId || userIndex}
+                                key={`span-user-${group.userId || "group"}_${userIndex}`}
                                 initial={{ opacity: 0, y: 5 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 className="font-semibold text-[15px] leading-tight text-white mb-0.5"
@@ -2290,7 +2290,7 @@ export function SparkViewer({
                             <div className="flex justify-between items-center mb-4 px-1 drop-shadow-lg">
                               {SKRIM_REACTIONS.slice(0, 6).map((r) => (
                                 <button
-                                  key={r.id}
+                                  key={`${spark.id}_reaction_${r.id}`}
                                   onClick={() => handleReaction(r.emoji)}
                                   className="text-3xl hover:scale-125 transition-transform active:scale-95 drop-shadow-xl filter"
                                 >
@@ -2352,7 +2352,7 @@ export function SparkViewer({
                                     <div className="flex -space-x-2">
                                       {previewViewers.map((v, i) => (
                                         <img
-                                          key={v.id}
+                                          key={`${spark.id}_viewer_${v.id}_${i}`}
                                           src={v.avatar}
                                           alt=""
                                           className="w-6 h-6 rounded-full object-cover border-2 border-black/60"
@@ -2675,7 +2675,7 @@ export function SparkViewer({
                         <div className="flex flex-col gap-2.5 max-h-[180px] overflow-y-auto no-scrollbar pr-1">
                           {sparkReplies.map((reply: any, index: number) => (
                             <div
-                              key={`${reply.id || 'reply'}_${index}`}
+                              key={`${spark.id}_reply_${reply.id || 'reply'}_${index}`}
                               className="flex items-start gap-2.5 bg-white/5 border border-white/5 rounded-xl p-2.5"
                             >
                               <img
@@ -2716,7 +2716,7 @@ export function SparkViewer({
                           "⚡ Pulsed!",
                         ].map((qr) => (
                           <button
-                            key={qr}
+                            key={`${spark.id}_quick_reply_${qr}`}
                             onClick={() => setReplyText(qr)}
                             className="bg-white/10 hover:bg-white/20 transition-colors px-3 py-1.5 rounded-full text-sm text-white border border-white/5"
                           >
@@ -3331,7 +3331,7 @@ export function SparkViewer({
                         <div className="flex flex-wrap gap-2">
                           {Object.entries(spark.reactions).map(([emoji, count]: [string, any]) => (
                             <div
-                              key={emoji}
+                              key={`${spark.id}_reactions_list_${emoji}`}
                               className="bg-white/15 border border-white/25 rounded-full px-3.5 py-1.5 flex items-center gap-1.5 text-sm font-bold text-white"
                             >
                               <span>{emoji}</span>
@@ -3353,7 +3353,7 @@ export function SparkViewer({
                         <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto no-scrollbar pr-1">
                           {sparkReplies.map((reply: any, index: number) => (
                             <div
-                              key={`${reply.id || 'reply'}_${index}`}
+                              key={`${spark.id}_insight_reply_${reply.id || 'reply'}_${index}`}
                               className="flex items-start gap-2.5 bg-white/5 border border-white/5 rounded-xl p-2.5"
                             >
                               <img
