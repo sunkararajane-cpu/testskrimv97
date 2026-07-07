@@ -146,6 +146,22 @@ export function SparkEnergyMeter({ spark, currentUser, onShowToast }: SparkEnerg
       });
       localStorage.setItem('skrimchat_notifications', JSON.stringify(notifs));
     } catch(e) {}
+
+    try {
+      const inApp = JSON.parse(localStorage.getItem('skrimchat_inapp_notifs') || '[]');
+      inApp.unshift({
+        id: 'boost_' + Date.now() + '_' + Math.random(),
+        creatorName: currentUser?.username || 'me',
+        creatorAvatar: currentUser?.avatar || '',
+        type: 'vibe_like', // displays thunderbolt icon in SignalScreen! Perfect!
+        body: `boosted your Spark energy to ${Math.min(100, Math.round(level + boostPercent))}%! ⚡🔥`,
+        read: false,
+        time: 'Just now',
+        timestamp: Date.now(),
+        vibeId: spark.id // fallback for navigation
+      });
+      localStorage.setItem('skrimchat_inapp_notifs', JSON.stringify(inApp));
+    } catch (e) {}
   };
 
   const handlePointerDown = (e: any) => {

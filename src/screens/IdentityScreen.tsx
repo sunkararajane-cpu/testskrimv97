@@ -292,7 +292,12 @@ export default function IdentityScreen() {
     const fetchActiveSparks = () => {
       getSparks().then((all) => {
         const now = Date.now();
-        const userActive = Array.isArray(all) ? all.filter((s: any) => s && s.isOwn && s.expiresAt && s.expiresAt > now) : [];
+        const userActive = Array.isArray(all) ? all.filter((s: any) => {
+          if (!s || !s.expiresAt || s.expiresAt <= now) return false;
+          const belongsToMe = s.isOwn || (s.user?.username === user?.username);
+          const partneredWithMe = s.isCollab && s.status === 'accepted' && (s.collabPartner?.username === user?.username);
+          return belongsToMe || partneredWithMe;
+        }) : [];
         setActiveSparks(userActive);
       }).catch(() => setActiveSparks([]));
     };

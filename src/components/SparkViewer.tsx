@@ -352,6 +352,7 @@ export function SparkViewer({
   const [showRadialHint, setShowRadialHint] = useState(false);
 
   const [replyText, setReplyText] = useState("");
+  const [sparkReplies, setSparkReplies] = useState<any[]>([]);
   const [isSaved, setIsSaved] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [isBounceSave, setIsBounceSave] = useState(false);
@@ -572,7 +573,47 @@ export function SparkViewer({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [radialMenuOpen]);
 
-  const DURATION = spark?.type === "video" ? 15000 : 5000;
+  const musicDurationMs = (spark?.music_duration_s ?? spark?.duration ?? spark?.duration_s ?? spark?.music?.duration_s) ? (spark.music_duration_s ?? spark.duration ?? spark.duration_s ?? spark.music?.duration_s) * 1000 : undefined;
+  const DURATION = musicDurationMs || (spark?.type === "video" ? 15000 : 5000);
+
+  useEffect(() => {
+    if (spark?.id) {
+      try {
+        const key = `skrimchat_spark_replies_${spark.id}`;
+        const stored = localStorage.getItem(key);
+        if (stored) {
+          setSparkReplies(JSON.parse(stored));
+        } else {
+          // Fallback seed comments so sparks never feel totally empty and dead!
+          setSparkReplies([
+            {
+              id: "seed1",
+              user: {
+                displayName: "CyberNinja",
+                avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=cyber"
+              },
+              text: "This spark has legendary energy! ⚡🔥",
+              timestamp: Date.now() - 3600000
+            },
+            {
+              id: "seed2",
+              user: {
+                displayName: "NeonPixel",
+                avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=pixel"
+              },
+              text: "The audio sync on this loop is perfection. ✨💎",
+              timestamp: Date.now() - 1800000
+            }
+          ]);
+        }
+      } catch (e) {
+        setSparkReplies([]);
+      }
+    } else {
+      setSparkReplies([]);
+    }
+  }, [spark?.id]);
+
   const progressInterval = useRef<any>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -827,6 +868,25 @@ export function SparkViewer({
       if (spark.reactions) spark.reactions[emoji] = (spark.reactions[emoji] || 0) + 1;
     } catch (e) {}
 
+    // Notify the creator of the Spark via in-app notifications
+    if (!isOwnSpark) {
+      try {
+        const inApp = JSON.parse(localStorage.getItem('skrimchat_inapp_notifs') || '[]');
+        inApp.unshift({
+          id: 'spark_react_' + Date.now() + '_' + Math.random(),
+          creatorName: currentUser?.username || 'me',
+          creatorAvatar: currentUser?.avatar || '',
+          type: 'vibe_like', // displays thunderbolt icon in SignalScreen! Perfect!
+          body: `reacted with ${emoji} to your Spark! ✨`,
+          read: false,
+          time: 'Just now',
+          timestamp: Date.now(),
+          vibeId: spark.id // fallback for navigation
+        });
+        localStorage.setItem('skrimchat_inapp_notifs', JSON.stringify(inApp));
+      } catch (e) {}
+    }
+
     if (spark.isCollab && spark.status === 'accepted') {
       const theirName = (spark.creator?.username === currentUser?.username ? spark.collabPartner?.username : spark.creator?.username)?.replace('@', '') || "partner";
       showToast(`⚡ Energy boosted on collab with @${theirName}!`);
@@ -1029,8 +1089,34 @@ export function SparkViewer({
   };
 
   const handleReplySend = () => {
-    if (!replyText.trim()) return;
-    // Persist reply as a real Connect DM
+    if (!replyText.trim() || !spark) return;
+    const newReply = {
+      id: Date.now().toString() + Math.random(),
+      user: {
+        displayName: currentUser?.displayName || currentUser?.fullName || 'You',
+        username: currentUser?.username || 'me',
+        avatar: currentUser?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=user'
+      },
+      text: replyText.trim(),
+      timestamp: Date.now()
+    };
+
+    const updatedReplies = [...sparkReplies, newReply];
+    setSparkReplies(updatedReplies);
+    try {
+      localStorage.setItem(`skrimchat_spark_replies_${spark.id}`, JSON.stringify(updatedReplies));
+      
+      // Update SparkReplies counter
+      spark.replies = (spark.replies || 0) + 1;
+      const sparksList = JSON.parse(localStorage.getItem('skrimchat_sparks') || '[]');
+      const idx = sparksList.findIndex((s: any) => s.id === spark.id);
+      if (idx !== -1) {
+        sparksList[idx].replies = spark.replies;
+        localStorage.setItem('skrimchat_sparks', JSON.stringify(sparksList));
+      }
+    } catch (e) {}
+
+    // Persist reply as a real Connect DM (for backward compatibility)
     try {
       const username = (group?.user?.username || group?.user?.handle || '').replace('@', '');
       const storedChatsStr = localStorage.getItem('skrimchat_custom_chats');
@@ -1045,9 +1131,30 @@ export function SparkViewer({
         status: 'sent',
         timestamp: Date.now(),
       });
-      localStorage.setItem('skrimchat_custom_chats', JSON.stringify(customChats)); window.dispatchEvent(new Event('skrimchat_custom_chats_updated'));
+      localStorage.setItem('skrimchat_custom_chats', JSON.stringify(customChats)); 
+      window.dispatchEvent(new Event('skrimchat_custom_chats_updated'));
     } catch (e) {}
-    showToast(`Reply sent to @${group?.user?.username || group?.user?.handle?.replace("@", "")}! ⚡`);
+
+    // Notify the creator via in-app notifications
+    if (!isOwnSpark) {
+      try {
+        const inApp = JSON.parse(localStorage.getItem('skrimchat_inapp_notifs') || '[]');
+        inApp.unshift({
+          id: 'spark_reply_' + Date.now() + '_' + Math.random(),
+          creatorName: currentUser?.username || 'me',
+          creatorAvatar: currentUser?.avatar || '',
+          type: 'comment',
+          body: `replied to your Spark: "${replyText.substring(0, 30)}${replyText.length > 30 ? '...' : ''}" 💬`,
+          read: false,
+          time: 'Just now',
+          timestamp: Date.now(),
+          vibeId: spark.id // fallback for navigation
+        });
+        localStorage.setItem('skrimchat_inapp_notifs', JSON.stringify(inApp));
+      } catch (e) {}
+    }
+
+    showToast(`Reply posted on Spark! 💬⚡`);
     setActiveSheet(null);
     setReplyText("");
   };
@@ -2036,6 +2143,34 @@ export function SparkViewer({
                             <span className="text-base animate-[spin_3s_linear_infinite]">🎵</span>
                             <span className="text-white text-[11px] font-bold max-w-[160px] truncate">{spark.music_title}</span>
                           </div>
+                        </div>
+                      )}
+
+                      {/* Ephemeral Real-time Glassmorphic Comments Stream */}
+                      {sparkReplies.length > 0 && (
+                        <div className="mt-3 pointer-events-auto flex flex-col gap-1.5 max-h-[140px] overflow-y-auto no-scrollbar py-1">
+                          {sparkReplies.map((reply: any, index: number) => (
+                            <motion.div
+                              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              key={reply.id || index}
+                              className="flex items-start gap-2 bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl px-3 py-1.5 w-max max-w-[90%] shadow-lg"
+                            >
+                              <img
+                                src={reply.user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${reply.user?.username || 'user'}`}
+                                alt={reply.user?.displayName || 'User'}
+                                className="w-5 h-5 rounded-full object-cover border border-white/20 shrink-0"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <span className="text-[10px] text-white/60 font-bold tracking-tight block">
+                                  {reply.user?.displayName || 'Someone'}
+                                </span>
+                                <span className="text-xs text-white leading-normal break-words">
+                                  {reply.text}
+                                </span>
+                              </div>
+                            </motion.div>
+                          ))}
                         </div>
                       )}
                     </div>

@@ -2693,11 +2693,36 @@ export default function PulseScreen() {
     const groups: Record<string, any> = {};
     sparks.forEach(spark => {
       if (spark.expiresAt && spark.expiresAt <= Date.now()) return;
-      const userId = spark.user?.id || spark.user?.username || 'unknown';
-      if (!groups[userId]) {
-        groups[userId] = { id: userId, userId, user: spark.user, isOwn: spark.isOwn, sparks: [], maxEnergy: 0, hasViewed: false, energy: 'COLD', expiresAt: 0 };
+
+      const addToGroup = (userObj: any, isOwnGroup: boolean) => {
+        if (!userObj) return;
+        const uId = userObj.id || userObj.username || 'unknown';
+        if (!groups[uId]) {
+          groups[uId] = {
+            id: uId,
+            userId: uId,
+            user: userObj,
+            isOwn: isOwnGroup,
+            sparks: [],
+            maxEnergy: 0,
+            hasViewed: false,
+            energy: 'COLD',
+            expiresAt: 0
+          };
+        }
+        if (!groups[uId].sparks.find((s: any) => s.id === spark.id)) {
+          groups[uId].sparks.push(spark);
+        }
+      };
+
+      const isCreatorOwn = spark.isOwn || (spark.user?.username === currentUser?.username);
+      addToGroup(spark.user, isCreatorOwn);
+
+      // Add to collab partner's group if collab is accepted
+      if (spark.isCollab && spark.status === 'accepted' && spark.collabPartner) {
+        const isPartnerOwn = spark.collabPartner.username === currentUser?.username;
+        addToGroup(spark.collabPartner, isPartnerOwn);
       }
-      if (!groups[userId].sparks.find((s: any) => s.id === spark.id)) groups[userId].sparks.push(spark);
     });
     // Compute group-level hasViewed: true only if ALL sparks in the group have been viewed
     Object.values(groups).forEach((group: any) => {
@@ -3259,6 +3284,30 @@ export default function PulseScreen() {
             createdAt: Date.now(),
             expiresAt: Date.now() + 86400000,
           };
+
+          // If responding to a challenge, notify the challenger
+          if (pendingChallenge) {
+            try {
+              const challenger = pendingChallenge.challengerHandle.replace('@', '');
+              const inApp = JSON.parse(localStorage.getItem('skrimchat_inapp_notifs') || '[]');
+              inApp.unshift({
+                id: 'challenge_notif_' + Date.now() + '_' + Math.random(),
+                creatorName: currentUser?.username || 'me',
+                creatorAvatar: currentUser?.avatar || '',
+                type: 'comment', // comment type displays a beautiful speech bubble icon in SignalScreen! Perfect!
+                body: `accepted your challenge and posted a Spark: "${spark.text || spark.caption || ''}" 🎯⚡`,
+                read: false,
+                time: 'Just now',
+                timestamp: Date.now(),
+                targetUser: challenger,
+                vibeId: spark.id
+              });
+              localStorage.setItem('skrimchat_inapp_notifs', JSON.stringify(inApp));
+            } catch (e) {
+              console.error("Failed to save challenge notification:", e);
+            }
+          }
+
           setSparks(prev => [spark, ...prev]);
           // Persist immediately — without this, a freshly created Spark only
           // lives in React state and vanishes on refresh, which also means it
