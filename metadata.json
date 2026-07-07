@@ -1,0 +1,9 @@
+{
+  "name": "Saktest Skrim V2",
+  "description": "Cloned from sakhilsaiteaj/saktestskrimv2",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

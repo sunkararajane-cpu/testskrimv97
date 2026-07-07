@@ -1,0 +1,75 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global lock - strictly deny anything not explicitly mapped
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isMemberOfChat(participants) {
+        return isSignedIn() && (request.auth.uid in participants);
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      // Anyone authenticated can read user profiles
+      allow read: if isSignedIn();
+      // Only the user themselves can edit their own profile
+      allow write: if isOwner(userId);
+    }
+
+    // Posts Collection
+    match /posts/{postId} {
+      // Anyone authenticated can view posts
+      allow read: if isSignedIn();
+      // Creation enforced mapping author to requestor
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      // Updates/Deletes restricted to author
+      allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // Polls Subcollection of Posts — votes live in their own doc (keyed by
+    // postId) rather than on the post itself, so any signed-in user can cast
+    // a vote without needing post-author write access. The client is
+    // trusted to only adjust counts by +/-1 per vote via a transaction;
+    // a stricter setup would move tallying into a Cloud Function.
+    match /polls/{postId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn();
+    }
+
+    // Chats Collection
+    match /chats/{chatId} {
+      // Only participants can read the chat doc
+      allow read: if isSignedIn() && isMemberOfChat(resource.data.participants);
+      // Only participants or system can update metadata
+      allow update: if isSignedIn() && isMemberOfChat(resource.data.participants);
+      allow create: if isSignedIn() && isMemberOfChat(request.resource.data.participants);
+      
+      // Messages Subcollection
+      match /msgs/{msgId} {
+        // Can only read and write messages in a chat you are a participant of
+        allow read, create: if isSignedIn() && 
+          (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants);
+      }
+    }
+
+    // Communities
+    match /communities/{communityId} {
+      // Read access could be public or members only, assuming public read for discovery
+      allow read: if isSignedIn();
+      // Only community owners can modify settings
+      allow write: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+    }
+  }
+}
